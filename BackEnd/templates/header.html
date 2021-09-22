@@ -1,17 +1,58 @@
-<header>
-    <div style="display: flex; justify-content: space-between; height: 50px; align-items:center">
-        <a href="/">SGRA</a>
-        {% if user.is_authenticated %}
-            <a href="{% url 'accountsapp:logout' %}">{{ user.username }}(Logout)</a>
-        {% else %}
-            <a href="{% url 'accountsapp:login' %}?next={{ request.path }}">Login</a>
-        {% endif %}
-    </div>
+<header class="navbar navbar-expand navbar-light flex-column flex-md-row bd-navbar">
+    <div class="container my-2">
+        <a class="navbar-brand" href="/">SGRA</a>
 
-    <div style="text-align: center; height: 48px; line-height: 48px;">
-        <a href='http://127.0.0.1:7777/articles/home'>홈</a>
-        <a href='http://127.0.0.1:7777/articles/list'>스터디</a>
-        <a href='http://127.0.0.1:7777/freearticles/list'>자유게시판</a>
-    </div>
+        <div class="navbar-nav-scroll">
+            <ul class="navbar-nav flex-row flex-wrap bd-navbar-nav pt-2 py-md-0">
+                <li class="nav-item"><a class="nav-link {% if request.path == '/' %} active {% endif %}" href="{% url 'home' %}">홈</a></li>
+                <li class="nav-item"><a class="nav-link {% if '/articles/' in request.path %} active {% endif %}" href="{% url 'articleapp:list' category='all' %}">스터디</a></li>
+                <li class="nav-item"><a class="nav-link {% if '/freearticles/' in request.path %} active {% endif %}" href="{% url 'freearticleapp:list' %}">자유게시판</a></li>
+            </ul>
+        </div>
 
+        <div class="navbar-nav flex-row d-md-flex" style="margin-left:auto">
+            <div class="user-menu" style="position: relative;">
+                {% if user.is_authenticated %}
+                    <div class="dropdown">
+                        <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            {{ user.profile.nickname }}
+                        </a>
+                        <div class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+                            <a class="dropdown-item" href="{% url 'profileapp:detail' pk=user.pk %}?tab=study">내 정보</a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item" href="{% url 'accountsapp:logout' %}">로그 아웃</a>
+                        </div>
+                    </div>
+                {% else %}
+                    <a href="{% url 'accountsapp:login' %}?next={{ request.path }}">로그인</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 </header>
+
+<script>
+    const userMenu = document.querySelector('.user-menu');
+    const btnDropdown = userMenu.querySelector('.dropdown-toggle');
+
+    document.addEventListener('click', event => {
+        var clicked = null;
+        const dropdownMenu = userMenu.querySelector('.dropdown-menu');
+
+        if (event.target == btnDropdown) {
+            const isVisible = dropdownMenu.offsetWidth > 0 || dropdownMenu.offsetHeight > 0;
+            if (!isVisible) {
+                dropdownMenu.style.display = 'block';
+                clicked = btnDropdown;
+            } else {
+                dropdownMenu.style.display = 'none';
+                clicked = null;
+            }
+        }
+
+        if (clicked != btnDropdown) {
+            dropdownMenu.style.display = 'none';
+            clicked = null;
+        }
+    });
+</script>

@@ -1,5 +1,3 @@
-import kwargs as kwargs
-import requests
 from django.contrib.auth.decorators import login_required
 
 # Create your views here.
@@ -10,7 +8,6 @@ from django.urls import reverse_lazy, reverse
 from django.utils.decorators import method_decorator
 from django.views.generic import CreateView, DetailView, UpdateView, DeleteView, ListView, FormView
 from django.views.generic.edit import FormMixin
-from django.views.generic.list import MultipleObjectMixin
 
 from articleapp.decorators import article_ownership_required
 from articleapp.forms import ArticleCreationForm, PostSearchForm
@@ -34,7 +31,7 @@ class ArticleCreateView(CreateView):
         return reverse('articleapp:detail', kwargs={'pk': self.object.pk})
 
 
-class ArticleDetailView(DetailView,FormMixin):
+class ArticleDetailView(DetailView, FormMixin):
     model = Article
     context_object_name = 'target_article'
     form_class = CommentCreationForm
@@ -45,7 +42,7 @@ class ArticleDetailView(DetailView,FormMixin):
         clicked_article = Article.objects.get(pk=kwargs['pk'])
         clicked_article.hits += 1
         clicked_article.save()
-        print(clicked_article.hits)
+
         return super().get(request, *args, **kwargs)
 
 
@@ -66,7 +63,7 @@ class ArticleUpdateView(UpdateView):
 class ArticleDeleteView(DeleteView):
     model = Article
     context_object_name = 'target_article'
-    success_url = reverse_lazy('articleapp:list')
+    success_url = reverse_lazy('articleapp:list_all')
     template_name = 'articleapp/delete.html'
 
 
@@ -76,78 +73,65 @@ class ArticleListView(ListView):
     template_name = 'articleapp/list.html'
     paginate_by = 20
 
+    def get_queryset(self):
+        category = self.kwargs['category']
+        if category == 'all':
+            result = Article.objects.all()
+        else:
+            # 1. 애초에 form 에서 전송할 때, 변환되서 오면 안되나?
+            # 2. 데이터베이스에 String으로 저장되어야 하는 이유라도?
+            #    (0, 1, 2, 3, 4, ... 같이 숫자로 저장하면 안됨?)
+            if category == 'lang':
+                category = '어학'
+            elif category == 'employ':
+                category = '취업'
+            elif category == 'public':
+                category = '고시/공무원'
+            elif category == 'hobby':
+                category = '취미/교양'
+            elif category == 'coding':
+                category = '프로그래밍'
+            elif category == 'etc':
+                category = '기타'
 
-class SearchFormView(FormView):
-    form_class = PostSearchForm
-    template_name = 'articleapp/post_search.html'
-
-    def form_valid(self, form):
-        searchWord = form.cleaned_data['search_word']
-        post_list = Article.objects.filter(Q(title__icontains=searchWord) | Q(content__icontains=searchWord) | Q(writer__username__icontains=searchWord)).distinct()
-
-        context = {}
-        context['form'] = form
-        context['search_term'] = searchWord
-        context['object_list'] = post_list
-
-        return render(self.request, self.template_name, context)
+            result = Article.objects.filter(progress_method=category)
+        return result
 
 
-        
-class ArticleListView1(ListView):
+# FormView 를 상속받게 해놨던데, 무슨 이유라도?
+# 검색결과 화면은 ListView 아닌가?
+class SearchFormView(ListView):
     model = Article
     context_object_name = 'article_list'
-    template_name = 'articleapp/list_language_study.html'
-    paginate_by = 20
+    template_name = 'articleapp/list.html'
 
+    # 몇 가지 질문 사항
+    # 1. form 유효성 검사하는 form_valid() 함수에서 검색 결과 조회하고 render 해주는데, 이거 맞아?
+    #    함수가 본인의 역할 이상의 일을 수행하고 있는거 아니야?
+    # 2. 단순 데이터 요청인데 굳이 form 으로 post 요청을 하는 이유는?
+    #   2.1. get 과 post 는 뭐고, 어떨때 사용하는지? (http method!!)
 
-class ArticleListView2(ListView):
-    model = Article
-    context_object_name = 'article_list'
-    template_name = 'articleapp/list_employment.html'
-    paginate_by = 20
-
-
-class ArticleListView3(ListView):
-    model = Article
-    context_object_name = 'article_list'
-    template_name = 'articleapp/list_public_officer.html'
-    paginate_by = 20
-
-
-class ArticleListView4(ListView):
-    model = Article
-    context_object_name = 'article_list'
-    template_name = 'articleapp/list_hobby.html'
-    paginate_by = 20
-
-
-class ArticleListView5(ListView):
-    model = Article
-    context_object_name = 'article_list'
-    template_name = 'articleapp/list_programming.html'
-    paginate_by = 20
-
-
-class ArticleListView6(ListView):
-    model = Article
-    context_object_name = 'article_list'
-    template_name = 'articleapp/list_other.html'
-    paginate_by = 20
-
-
-class ArticleHomeView(ListView):
-    model = Article
-    context_object_name = 'article_list'
-    template_name = 'articleapp/home.html'
+    # def form_valid(self, form):
+    #     searchWord = form.cleaned_data['search_word']
+    #     post_list = Article.objects.filter(
+    #         Q(title__icontains=searchWord) | Q(content__icontains=searchWord) | Q(writer__username__icontains=searchWord)
+    #     ).distinct()
+    #
+    #     context = {}
+    #     context['form'] = form
+    #     context['search_term'] = searchWord
+    #     context['object_list'] = post_list
+    #
+    #     return render(self.request, self.template_name, context)
 
     def get_queryset(self):
-        return Article.objects.order_by('-created_at')[:5]
+        search_key = self.request.GET['search_word']
 
-    def get_context_data(self, **kwargs):
-        article_free_list = FreeArticle.objects.all()
-        return super().get_context_data(article_free_list=article_free_list,
-                                        **kwargs)
+        post_list = Article.objects.filter(
+            Q(title__icontains=search_key) | Q(content__icontains=search_key) | Q(writer__username__icontains=search_key)
+        ).distinct()
+
+        return post_list
 
 
 

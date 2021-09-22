@@ -18,8 +18,9 @@ from freearticleapp.models import FreeArticle
 class ArticleListView(ListView):
     model = FreeArticle
     context_object_name = 'article_free_list'
-    template_name = 'freearticleapp/free_list.html'
+    template_name = 'freearticleapp/list.html'
     paginate_by = 20
+
 
 @method_decorator(login_required, 'get')
 @method_decorator(login_required, 'post')
@@ -36,8 +37,7 @@ class ArticleCreateView(CreateView):
         return reverse('freearticleapp:detail', kwargs={'pk': self.object.pk})
 
 
-
-class ArticleDetailView(DetailView,FormMixin):
+class ArticleDetailView(DetailView, FormMixin):
     model = FreeArticle
     context_object_name = 'target_article'
     form_class = CommentCreationForm
@@ -48,9 +48,8 @@ class ArticleDetailView(DetailView,FormMixin):
         clicked_article = FreeArticle.objects.get(pk=kwargs['pk'])
         clicked_article.hits += 1
         clicked_article.save()
-        print(clicked_article.hits)
-        return super().get(request, *args, **kwargs)
 
+        return super().get(request, *args, **kwargs)
 
 
 @method_decorator(article_ownership_required, 'get')
@@ -74,25 +73,15 @@ class ArticleDeleteView(DeleteView):
     template_name = 'freearticleapp/delete.html'
 
 
-class SearchFormView(FormView):
-    form_class = PostSearchForm
-    template_name = 'freearticleapp/post_search.html'
-
-    def form_valid(self, form):
-        searchWord = form.cleaned_data['search_word']
-        post_list = FreeArticle.objects.filter(Q(title__icontains=searchWord) | Q(content__icontains=searchWord) | Q(writer__username__icontains=searchWord)).distinct()
-
-        context = {}
-        context['form'] = form
-        context['search_term'] = searchWord
-        context['object_list'] = post_list
-
-        return render(self.request, self.template_name, context)
-
-class FreeArticleHomeView(ListView):
+class ArticleSearchView(ListView):
     model = FreeArticle
     context_object_name = 'article_free_list'
-    template_name = 'freearticleapp/home.html'
+    template_name = 'freearticleapp/list.html'
 
     def get_queryset(self):
-        return FreeArticle.objects.order_by('-created_at')[:5]
+        search_key = self.request.GET['search_word']
+        post_list = FreeArticle.objects.filter(
+            Q(title__icontains=search_key) | Q(content__icontains=search_key) | Q(writer__username__icontains=search_key)
+        ).distinct()
+
+        return post_list

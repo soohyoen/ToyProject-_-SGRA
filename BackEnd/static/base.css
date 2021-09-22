@@ -75,7 +75,7 @@
 }
 
 a{
-    text_decoration:none;
+    text-decoration: none;
     color: black;
 }
 
@@ -83,3 +83,23 @@ a:hover{
     color:black;
 }
 
+.thumbnail-image {
+    border-radius: 20rem;
+    width: 2.5rem;
+    margin-right: 1rem;
+}
+
+.article_item + .article_item {
+    margin-top: .5rem;
+}
+
+.card-link {
+    color: #2962ff;
+}
+.card-link:hover{
+    color: #2962ff;
+}
+
+header {
+    border-bottom: 1px solid rgba(0, 0, 0, .1);
+}
